@@ -10,7 +10,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -44,6 +48,9 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
     private boolean isStartedForRecording = false;
     private StringBuffer records = new StringBuffer();;
     private String divider = ",";
+    private long basic_timestamp = 0;
+    private String monitoringBeacon = "B4:99:4C:74:2B:5A";
+    Spinner spinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +67,8 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
 
         //layout settings
         mainText = (TextView) findViewById(R.id.main_text);
+
+        //mobile config file setting
         toggle = (ToggleButton) findViewById(R.id.togglebutton);
         toggle.setChecked(calibration_setting);
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -70,6 +79,31 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
                 Toast.makeText(MainActivity.this, "Please restart the application to apply the change", Toast.LENGTH_SHORT).show();
             }
         });
+
+
+        //beacon select spinner
+        spinner = (Spinner) findViewById(R.id.beacons_spinner);
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.beacons_array, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        spinner.setAdapter(adapter);
+
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                monitoringBeacon = parent.getItemAtPosition(position).toString();
+                Toast.makeText(MainActivity.this, "Current monitoring beacon " + monitoringBeacon, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        monitoringBeacon = spinner.getSelectedItem().toString();
 
         recording = (ToggleButton) findViewById(R.id.recording);
         recording.setChecked(isStartedForRecording);
@@ -83,14 +117,20 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 isStartedForRecording = isChecked;
                 if (isChecked) {
+                    spinner.setEnabled(false);
                     recording.setBackgroundColor(Color.parseColor("#C1B8001D"));
                     Toast.makeText(MainActivity.this, "Recording data", Toast.LENGTH_SHORT).show();
                 } else {
+                    spinner.setEnabled(true);
                     recording.setBackgroundColor(Color.parseColor("#c100b80f"));
                     saveBufferToFile();
                 }
             }
         });
+
+
+
+
 
         //beacon settings
         beaconManager = BeaconManager.getInstanceForApplication(this);
@@ -111,7 +151,7 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
         File myDir = new File(root + "/saved_beacon_records");
         myDir.mkdirs();
         long n = System.currentTimeMillis();
-        String fname = "Record-"+ n +".csv";
+        String fname = "Record-" + monitoringBeacon+ "-"+ n +".csv";
         File file = new File (myDir, fname);
         if (file.exists ()) file.delete ();
         try {
@@ -159,7 +199,7 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
 
                 if (beacons.size() > 0) {
                     for (Beacon beacon:beacons) {
-                        if(beacon.getBluetoothAddress().equals("D8:CF:DD:50:4F:EB")) {
+                        if(beacon.getBluetoothAddress().equals(monitoringBeacon)) {
                             DecimalFormat df = new DecimalFormat("####0.000");
                             double rawDistance = beacon.getDistance();
                             Pair<Double,Double> filteredDistance = KFWithDeltaDistance.updatePrediction(rawDistance, measurementVariance);
@@ -168,14 +208,19 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
                             final String text = "Raw Distance : " + df.format(rawDistance)
                                     + "\nFiltered Distance (with delta): " + df.format(filteredDistance.getFirst()) + " var: " + df.format(filteredDistance.getSecond())
                                     + "\nFiltered Distance (no delta): " + df.format(filteredNoDeltaDistance.getFirst()) + " var: " + df.format(filteredNoDeltaDistance.getSecond())
-                                    + "\nRSSI = "  + beacon.getRssi() + "\n";
+                                    + "\nRSSI = "  + beacon.getRssi() + "\n"
+                                    + "\nTx power = "  + beacon.getTxPower() + "\n"
+                                    + "\nName = "  + beacon.getBluetoothName() + "\n";
+
+
                             if(isStartedForRecording) {
                                 if(records.length() == 0) {
+                                    basic_timestamp = System.currentTimeMillis();
                                     //if buffer is empty, write header at first
                                     records.append("Timestamp" + divider + "Raw Distance" + divider+"Filtered Distance (with delta)" + divider + "Variance"
                                             + divider + "Filtered Distance (no delta)" + divider + "Variance" + divider + "RSSI\n");
                                 }
-                                String csv_text = System.currentTimeMillis()
+                                String csv_text = System.currentTimeMillis() - basic_timestamp
                                         + divider + df.format(rawDistance)
                                         + divider + df.format(filteredDistance.getFirst())
                                         + divider + df.format(filteredDistance.getSecond())

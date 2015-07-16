@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="beacons_array">
+        <item>B4:99:4C:74:2B:5A</item>
+        <item>D8:CF:DD:50:4F:EB</item>
+    </string-array>
+</resources>
