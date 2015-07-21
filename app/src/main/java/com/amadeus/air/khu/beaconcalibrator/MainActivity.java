@@ -133,8 +133,9 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
 
 
         //beacon settings
-        beaconManager = BeaconManager.getInstanceForApplication(this);
         beaconManager.setUseCalibratedDeviceProfile(calibration_setting);
+        beaconManager = BeaconManager.getInstanceForApplication(this);
+        beaconManager.setDebug(true);
         beaconManager.bind(this);
         beaconManager.setForegroundScanPeriod(500);
         beaconManager.getBeaconParsers().add(new BeaconParser().
