@@ -40,6 +40,7 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
     private TextView mainText;
     private ToggleButton toggle;
     private ToggleButton recording;
+    private ToggleButton moving;
     KalmanFilter KFWithDeltaDistance;
     KalmanFilter KFNoDeltaDistance;
     private double measurementVariance = 0.64;
@@ -51,6 +52,7 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
     private long basic_timestamp = 0;
     private String monitoringBeacon = "B4:99:4C:74:2B:5A";
     Spinner spinner;
+    private boolean isMoving = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +106,29 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
             }
         });
         monitoringBeacon = spinner.getSelectedItem().toString();
+
+        moving = (ToggleButton) findViewById(R.id.moving);
+        moving.setChecked(isStartedForRecording);
+        if(moving.isChecked()) {
+            moving.setBackgroundColor(Color.parseColor("#C1B8001D"));
+        } else {
+            moving.setBackgroundColor(Color.parseColor("#c100b80f"));
+        }
+
+        moving.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    moving.setBackgroundColor(Color.parseColor("#C1B8001D"));
+                    isMoving = true;
+                    Toast.makeText(MainActivity.this, "Now you are moving", Toast.LENGTH_SHORT).show();
+                } else {
+                    moving.setBackgroundColor(Color.parseColor("#c100b80f"));
+                    isMoving = false;
+                    Toast.makeText(MainActivity.this, "Now you are stopped", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         recording = (ToggleButton) findViewById(R.id.recording);
         recording.setChecked(isStartedForRecording);
@@ -219,7 +244,13 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
                                     basic_timestamp = System.currentTimeMillis();
                                     //if buffer is empty, write header at first
                                     records.append("Timestamp" + divider + "Raw Distance" + divider+"Filtered Distance (with delta)" + divider + "Variance"
-                                            + divider + "Filtered Distance (no delta)" + divider + "Variance" + divider + "RSSI\n");
+                                            + divider + "Filtered Distance (no delta)" + divider + "Variance" + divider + "RSSI"+ divider + "isMoving\n");
+                                }
+                                String moving_text;
+                                if (isMoving) {
+                                    moving_text = "Moving";
+                                } else {
+                                    moving_text = "Stopped";
                                 }
                                 String csv_text = System.currentTimeMillis() - basic_timestamp
                                         + divider + df.format(rawDistance)
@@ -227,7 +258,8 @@ public class MainActivity extends ActionBarActivity  implements BeaconConsumer {
                                         + divider + df.format(filteredDistance.getSecond())
                                         + divider + df.format(filteredNoDeltaDistance.getFirst())
                                         + divider + df.format(filteredNoDeltaDistance.getSecond())
-                                        + divider  + beacon.getRssi() + "\n";
+                                        + divider  + beacon.getRssi()
+                                        + divider + moving_text + "\n";
                                 records.append(csv_text);
                             }
                             Log.i(TAG, text);
